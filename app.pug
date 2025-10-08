@@ -10,6 +10,7 @@ html#hELLO(
 
     title [##_page_title_##] — [##_title_##]
 
+    link(rel='icon' href='https://junbyeol.tistory.com/favicon.ico')
     link(rel='alternate' type='application/rss+xml' title='[##_title_##]' href='[##_rss_url_##]')
 
     link(rel='preconnect' href='//fonts.googleapis.com')
@@ -58,6 +59,10 @@ html#hELLO(
     class='overflow-x-hidden bg-h-100 dark:bg-h-800')
     block TIDORY
 
+    script. 
+      document.alpineReady = false;
+      document.mathjaxReady = false;
+
     script.
       document.addEventListener('alpine:init', () => Alpine.data('app', () => ({
         /**
@@ -75,15 +80,78 @@ html#hELLO(
          */
         init () {
           this.loaded()
-        },
+        }, 
 
         /**
          * Loaded
          */
         loaded () {
-          setTimeout(() => this.loading = false, 100)
+          setTimeout(() => {
+            this.loading = false;
+            console.log('alpine ready');
+            document.alpineReady = true;
+            if(document.mathjaxReady) {
+              document.typesetMathjax();
+            }
+          }, 100)
         }
       })))
 
     script.
       window.addEventListener('DOMContentLoaded', () => Alpine.start())
+
+    script.
+      MathJax = {
+          tex: {
+            inlineMath: {'[+]': [['$', '$']]}
+          }
+        };
+
+    script.
+      document.mathjaxReady = function () {
+        console.log('mathjax ready');
+        document.mathjaxReady = true;
+        if (document.alpineReady) {
+          document.typesetMathjax();
+        }
+      }
+    
+    script.
+      document.typesetMathjax = function () {
+        console.log('typesetMathjax');
+        //https://docs.mathjax.org/en/latest/advanced/typeset.html#handling-new-content
+        //
+        //  Record that we are running MathJax and that no additional update
+        //  is needed after that.
+        //
+        mjRunning = true;
+        updatePending = false;
+        //
+        //  Forget about any old math expressions from the preview
+        //
+        //- MathJax.startup.document.clearMathItemsWithin([output]);
+        //
+        //  Reset any TeX labels or equation numbers
+        //  Start a new sandbox for new macro definitions (and remove any old ones)
+        //
+        MathJax.texReset();
+        MathJax.tex2mml('\\begingroupSandbox');
+        //
+        //  Update the preview HTML and typeset the math
+        //
+        //- output.innerHTML = input.value;
+        MathJax.typesetPromise()
+          .then(() => {
+            //
+            //  MathJax has completed, so is no longer running
+            //  If an update was needed while MathJax was running, update the
+            //    preview again.
+            //
+            console.log('MathJax update has completed');
+            mjRunning = false;
+            if (updatePending) typesetMathjax();
+          })
+          .catch((err) => console.error('Math typeset failed:', err));
+      }
+
+    script(defer src='https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js', onload='mathjaxReady()')
